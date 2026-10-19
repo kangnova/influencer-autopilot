@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Influencer Autopilot
 
-## Getting Started
+A single-user platform that automates an AI-influencer business end to end: niche
+research, persona design, course + viral content production, scheduled Instagram
+publishing, and sales tracking — without filming any content.
 
-First, run the development server:
+## What it does
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Orchestrates a 5-phase pipeline (full detail in `docs/PRD.md`):
+
+1. **Research** — find and rank profitable Instagram niches.
+2. **Persona** — generate a consistent, hyper-realistic AI influencer.
+3. **Production** — two parallel tracks: the digital product (course) and traffic
+   content (30-day plan), generated from LLM scripts.
+4. **Distribution** — schedule and publish content to Instagram.
+5. **Monetization** — track the funnel: views → clicks → sales.
+
+## Stack
+
+- Next.js (App Router) + TypeScript (strict)
+- Tailwind CSS + shadcn/ui
+- Prisma + PostgreSQL
+- NextAuth.js (single-user credentials)
+- Zod + TanStack Query
+- OpenRouter (LLM orchestration, ordered model fallback)
+- Postgres-backed job queue + worker process for background pipeline runs
+
+## Architecture (high level)
+
+```
+App (Next.js)  ── UI + API routes + job enqueueing
+Worker (Node)  ── polls the Job table, runs LLM calls + media processing
+Postgres       ── data + job queue
+Connectors     ── pluggable adapters: video gen (Higgsfield manual / HeyGen /
+                   D-ID / Replicate) and Instagram (Graph API)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+See `docs/SPEC.md` for the data model, API contract, and connector interfaces.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Roadmap
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+M1 Foundation → M2 LLM pipeline → M3 Video generation → M4 Distribution →
+M5 Monetization loop (see `docs/PRD.md` § Milestones).
 
-## Learn More
+## Getting started
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Not yet scaffolded — this repo currently holds only the planning documents.
+After scaffolding: `docker compose up` + `npm run dev`.

@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OPERATOR
+}
+
+enum Status {
+  DRAFT
+  READY
+  SCHEDULED
+  PUBLISHED
+  FAILED
+  ARCHIVED
+}
+
+enum MediaKind {
+  IMAGE
+  VIDEO
+}
+
+enum Platform {
+  INSTAGRAM
+}
+
+enum JobType {
+  NICHE_RESEARCH
+  PERSONA_GENERATE
+  COURSE_SCRIPTS
+  CONTENT_PLAN
+  VIDEO_PROMPTS
+  MEDIA_IMPORT
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(OPERATOR)
+  createdAt DateTime @default(now())
+}
+
+model Niche {
+  id                String        @id @default(cuid())
+  name              String
+  description       String?
+  monetizationScore Int           @default(0)
+  status            Status        @default(DRAFT)
+  researchNotes     String?
+  salesLinkUrl      String?
+  createdAt         DateTime      @default(now())
+  personas          Persona[]
+  courses           Course[]
+  contentPlans      ContentPlan[]
+}
+
+model Persona {
+  id             String       @id @default(cuid())
+  nicheId        String
+  niche          Niche        @relation(fields: [nicheId], references: [id])
+  name           String
+  masterPrompt   String
+  avatarImageUrl String?
+  identity       String?
+  status         Status       @default(DRAFT)
+  createdAt      DateTime     @default(now())
+  mediaAssets    MediaAsset[]
+}
+
+model Course {
+  id               String   @id @default(cuid())
+  nicheId          String
+  niche            Niche    @relation(fields: [nicheId], references: [id])
+  title            String
+  problemStatement String?
+  status           Status   @default(DRAFT)
+  createdAt        DateTime @default(now())
+  lessons          Lesson[]
+}
+
+model Lesson {
+  id           String      @id @default(cuid())
+  courseId     String
+  course       Course      @relation(fields: [courseId], references: [id])
+  title        String
+  script       String?
+  videoPrompt  String?
+  order        Int         @default(0)
+  status       Status      @default(DRAFT)
+  mediaAssetId String?     @unique
+  mediaAsset   MediaAsset? @relation(fields: [mediaAssetId], references: [id])
+}
+
+model ContentPlan {
+  id        String        @id @default(cuid())
+  nicheId   String
+  niche     Niche         @relation(fields: [nicheId], references: [id])
+  title     String
+  dayCount  Int           @default(30)
+  status    Status        @default(DRAFT)
+  createdAt DateTime      @default(now())
+  items     ContentItem[]
+}
+
+model ContentItem {
+  id           String       @id @default(cuid())
+  planId       String
+  plan         ContentPlan  @relation(fields: [planId], references: [id])
+  dayIndex     Int
+  hook         String?
+  script       String?
+  videoPrompt  String?
+  status       Status       @default(DRAFT)
+  scheduledAt  DateTime?
+  mediaAssetId String?      @unique
+  mediaAsset   MediaAsset?  @relation(fields: [mediaAssetId], references: [id])
+  posts        Post[]
+}
+
+model MediaAsset {
+  id          String       @id @default(cuid())
+  url         String
+  kind        MediaKind
+  source      String       @default("MANUAL")
+  status      Status       @default(READY)
+  createdAt   DateTime     @default(now())
+  personaId   String?
+  persona     Persona?     @relation(fields: [personaId], references: [id])
+  lesson      Lesson?
+  contentItem ContentItem?
+}
+
+model SocialAccount {
+  id          String   @id @default(cuid())
+  platform    Platform @default(INSTAGRAM)
+  handle      String
+  accountType String   @default("BUSINESS")
+  accessToken String
+  status      Status   @default(DRAFT)
+  createdAt   DateTime @default(now())
+  posts       Post[]
+}
+
+model Post {
+  id              String        @id @default(cuid())
+  contentItemId   String?
+  contentItem     ContentItem?  @relation(fields: [contentItemId], references: [id])
+  socialAccountId String
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id])
+  caption         String?
+  status          Status        @default(DRAFT)
+  approved        Boolean       @default(false)
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  externalPostId  String?
+  createdAt       DateTime      @default(now())
+  metrics         Metric[]
+}
+
+model Metric {
+  id          String   @id @default(cuid())
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id])
+  date        DateTime @default(now())
+  impressions Int      @default(0)
+  reach       Int      @default(0)
+  likes       Int      @default(0)
+  comments    Int      @default(0)
+  shares      Int      @default(0)
+  clicks      Int      @default(0)
+  sales       Int      @default(0)
+}
+
+model Job {
+  id        String    @id @default(cuid())
+  type      JobType
+  payload   Json
+  status    JobStatus @default(PENDING)
+  result    Json?
+  error     String?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+  startedAt DateTime?
+  doneAt    DateTime?
+}

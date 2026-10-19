@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: influencer-autopilot-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: autopilot
+      POSTGRES_PASSWORD: autopilot
+      POSTGRES_DB: influencer_autopilot
+    ports:
+      - "5437:5432"
+    volumes:
+      - ia_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autopilot -d influencer_autopilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ia_db_data:

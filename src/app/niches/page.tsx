@@ -1,0 +1,57 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
+import { NicheForm } from "@/components/niche-form";
+import { DeleteButton } from "@/components/delete-button";
+import { LogoutButton } from "@/components/logout-button";
+
+export const dynamic = "force-dynamic";
+
+export default async function NichesPage() {
+  const session = await getServerSession(authOptions);
+  if (!session) redirect("/login");
+
+  const niches = await prisma.niche.findMany({ orderBy: { createdAt: "desc" } });
+
+  return (
+    <main className="mx-auto max-w-3xl space-y-6 p-8">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Niches</h1>
+          <p className="text-sm text-neutral-500">{session.user?.email}</p>
+        </div>
+        <LogoutButton />
+      </header>
+
+      <NicheForm />
+
+      <section className="space-y-3">
+        <h2 className="font-medium">Your niches ({niches.length})</h2>
+        {niches.length === 0 ? (
+          <p className="rounded border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-500">
+            No niches yet. Add your first niche above.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {niches.map((niche) => (
+              <li
+                key={niche.id}
+                className="flex items-start justify-between gap-4 rounded-lg border border-neutral-200 bg-white p-4"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium">{niche.name}</p>
+                  {niche.description && (
+                    <p className="mt-1 text-sm text-neutral-600">{niche.description}</p>
+                  )}
+                  <p className="mt-2 text-xs text-neutral-400">Status: {niche.status}</p>
+                </div>
+                <DeleteButton id={niche.id} name={niche.name} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </main>
+  );
+}
