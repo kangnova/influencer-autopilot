@@ -11,6 +11,7 @@ const links = [
   { href: "/media", label: "Media" },
   { href: "/social-accounts", label: "Accounts" },
   { href: "/posts", label: "Posts" },
+  { href: "/metrics", label: "Metrics" },
   { href: "/jobs", label: "Jobs" },
 ];
 

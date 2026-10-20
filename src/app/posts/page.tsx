@@ -6,6 +6,7 @@ import { Nav } from "@/components/nav";
 import { PostForm } from "@/components/post-form";
 import { PostActions } from "@/components/post-actions";
 import { DeleteButton } from "@/components/delete-button";
+import { PullInsightsButton } from "@/components/pull-insights-button";
 import { LogoutButton } from "@/components/logout-button";
 import { getSocialProvider } from "@/lib/social-provider";
 
@@ -114,6 +115,9 @@ export default async function PostsPage() {
                     status={post.status}
                     publishMode={publishMode}
                   />
+                  {publishMode === "instagram" &&
+                    post.status === "PUBLISHED" &&
+                    post.externalPostId && <PullInsightsButton id={post.id} />}
                   <DeleteButton
                     id={post.id}
                     name="post"

@@ -6,6 +6,7 @@ import { NicheForm } from "@/components/niche-form";
 import { Nav } from "@/components/nav";
 import { DeleteButton } from "@/components/delete-button";
 import { RunJobButton } from "@/components/run-job-button";
+import { NicheSalesLinkForm } from "@/components/niche-sales-link-form";
 import { LogoutButton } from "@/components/logout-button";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +60,10 @@ export default async function NichesPage() {
                       </pre>
                     </details>
                   )}
+                  <NicheSalesLinkForm
+                    id={niche.id}
+                    salesLinkUrl={niche.salesLinkUrl}
+                  />
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <RunJobButton

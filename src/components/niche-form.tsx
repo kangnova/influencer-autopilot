@@ -7,6 +7,7 @@ export function NicheForm() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [salesLinkUrl, setSalesLinkUrl] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +18,7 @@ export function NicheForm() {
     const res = await fetch("/api/niches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify({ name, description, salesLinkUrl }),
     });
     const json = await res.json().catch(() => null);
     if (!res.ok) {
@@ -27,6 +28,7 @@ export function NicheForm() {
     }
     setName("");
     setDescription("");
+    setSalesLinkUrl("");
     setLoading(false);
     router.refresh();
   }
@@ -53,6 +55,12 @@ export function NicheForm() {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Description (optional)"
           rows={2}
+          className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+        />
+        <input
+          value={salesLinkUrl}
+          onChange={(e) => setSalesLinkUrl(e.target.value)}
+          placeholder="Sales link (Lynk.id) — optional"
           className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
         />
         <button
