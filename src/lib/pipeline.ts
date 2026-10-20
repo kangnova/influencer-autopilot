@@ -94,15 +94,17 @@ async function course(job: { payload: JobPayload }): Promise<HandlerResult> {
   const niche = await prisma.niche.findUnique({ where: { id: nicheId } });
   if (!niche) throw new Error(`Niche ${nicheId} not found`);
 
+  const persona = await prisma.persona.findFirst({ where: { nicheId } });
   const { system, user } = prompts.courseScriptsPrompt(
     niche.name,
-    job.payload.topic
+    job.payload.topic,
+    persona?.masterPrompt || undefined
   );
   const llm = await completeWithFallback({ system, user, json: true });
   const parsed = parseJson<{
     title?: string;
     problemStatement?: string;
-    lessons?: { title?: string; script?: string }[];
+    lessons?: { title?: string; script?: string; videoPrompt?: string }[];
   }>(llm.text);
 
   const lessons = (parsed.lessons ?? [])
@@ -119,6 +121,7 @@ async function course(job: { payload: JobPayload }): Promise<HandlerResult> {
         create: lessons.map((l, i) => ({
           title: l.title!.trim(),
           script: l.script || null,
+          videoPrompt: l.videoPrompt || null,
           order: i,
         })),
       },
@@ -133,6 +136,7 @@ async function course(job: { payload: JobPayload }): Promise<HandlerResult> {
     courseId: course.id,
     title: course.title,
     lessonCount: course.lessons.length,
+    withVideoPrompts: course.lessons.filter((l) => l.videoPrompt).length,
   };
 }
 
@@ -144,11 +148,16 @@ async function contentPlan(job: { payload: JobPayload }): Promise<HandlerResult>
 
   const dayCount = Math.min(Math.max(job.payload.dayCount ?? 30, 1), 30);
 
-  const { system, user } = prompts.contentPlanPrompt(niche.name, dayCount);
+  const persona = await prisma.persona.findFirst({ where: { nicheId } });
+  const { system, user } = prompts.contentPlanPrompt(
+    niche.name,
+    dayCount,
+    persona?.masterPrompt || undefined
+  );
   const llm = await completeWithFallback({ system, user, json: true });
   const parsed = parseJson<{
     title?: string;
-    items?: { day?: number; hook?: string; script?: string }[];
+    items?: { day?: number; hook?: string; script?: string; videoPrompt?: string }[];
   }>(llm.text);
 
   const items = (parsed.items ?? []).slice(0, dayCount);
@@ -164,6 +173,7 @@ async function contentPlan(job: { payload: JobPayload }): Promise<HandlerResult>
           dayIndex: it.day ?? 0,
           hook: it.hook || null,
           script: it.script || null,
+          videoPrompt: it.videoPrompt || null,
         })),
       },
     },
@@ -177,6 +187,7 @@ async function contentPlan(job: { payload: JobPayload }): Promise<HandlerResult>
     planId: plan.id,
     title: plan.title,
     itemCount: plan.items.length,
+    withVideoPrompts: plan.items.filter((it) => it.videoPrompt).length,
   };
 }
 

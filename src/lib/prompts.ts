@@ -41,33 +41,45 @@ export function personaPrompt(nicheName: string): PromptPair {
 
 export function courseScriptsPrompt(
   nicheName: string,
-  topic?: string
+  topic?: string,
+  avatarRef?: string
 ): PromptPair {
   const topicLine = topic ? `Focus the course on this specific problem: "${topic}".` : "";
+  const avatarLine = avatarRef
+    ? `Avatar reference — reuse this EXACT influencer (identity, look, style, voice) in every lesson: """${avatarRef}""".`
+    : "Invent one hyper-realistic AI influencer avatar and keep it visually identical across every lesson.";
   return {
     system:
-      "You create short, high-value video courses. Each lesson is a spoken script. " +
+      "You create short, high-value video courses. Each lesson is a spoken script plus a Higgsfield-ready video-generation prompt, " +
+      "with the SAME avatar across all lessons for visual consistency. " +
       JSON_RULE,
     user:
       `For the niche "${nicheName}", identify the biggest pain points and build a short course that solves ONE specific problem. ` +
       `${topicLine} ` +
+      `${avatarLine} ` +
       `Max 5 lessons. Write everything in Bahasa Indonesia. Return JSON: ` +
-      `{"title":"...","problemStatement":"...","lessons":[{"title":"...","script":"..."}]}`,
+      `{"title":"...","problemStatement":"...","lessons":[{"title":"...","script":"...","videoPrompt":"detailed Higgsfield video prompt: scene, camera, lighting, wardrobe, the consistent avatar's look, and any on-screen text"}]}`,
   };
 }
 
 export function contentPlanPrompt(
   nicheName: string,
-  dayCount: number
+  dayCount: number,
+  avatarRef?: string
 ): PromptPair {
+  const avatarLine = avatarRef
+    ? `Avatar reference — reuse this EXACT influencer (identity, look, style, voice) in every item: """${avatarRef}""".`
+    : "Invent one hyper-realistic AI influencer avatar and keep it visually identical across every item.";
   return {
     system:
       "You plan viral short-form video content. You copy PATTERNS (hook, structure, duration), never anyone's actual content. " +
+      "Each item also gets a Higgsfield-ready video-generation prompt with a consistent avatar. " +
       JSON_RULE,
     user:
       `For the niche "${nicheName}", build a ${dayCount}-day content plan of original hooks and scripts based on proven viral patterns. ` +
+      `${avatarLine} ` +
       `Write everything in Bahasa Indonesia. Return JSON: ` +
-      `{"title":"...","items":[{"day":1,"hook":"...","script":"..."}]} ` +
+      `{"title":"...","items":[{"day":1,"hook":"...","script":"...","videoPrompt":"detailed Higgsfield video prompt: scene, camera, lighting, wardrobe, the consistent avatar's look, and any on-screen text"}]} ` +
       `with exactly ${dayCount} items, day starting at 1.`,
   };
 }

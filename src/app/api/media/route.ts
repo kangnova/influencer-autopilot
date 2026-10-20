@@ -53,6 +53,31 @@ export async function POST(req: Request) {
       : null;
   if (!kind) return fail("Only image or video files are allowed", 422);
 
+  const lessonId = form.get("lessonId");
+  const contentItemId = form.get("contentItemId");
+  const targetLessonId =
+    typeof lessonId === "string" && lessonId.trim() ? lessonId.trim() : null;
+  const targetItemId =
+    typeof contentItemId === "string" && contentItemId.trim()
+      ? contentItemId.trim()
+      : null;
+  if (targetLessonId && targetItemId) {
+    return fail("Provide lessonId or contentItemId, not both", 422);
+  }
+
+  // Validate the link target BEFORE writing the file so a bad target never
+  // leaves an orphaned asset on disk.
+  if (targetLessonId) {
+    const lesson = await prisma.lesson.findUnique({ where: { id: targetLessonId } });
+    if (!lesson) return fail("Lesson not found", 404);
+    if (lesson.mediaAssetId) return fail("Lesson already has media attached", 409);
+  }
+  if (targetItemId) {
+    const item = await prisma.contentItem.findUnique({ where: { id: targetItemId } });
+    if (!item) return fail("Content item not found", 404);
+    if (item.mediaAssetId) return fail("Content item already has media attached", 409);
+  }
+
   const bytes = Buffer.from(await f.arrayBuffer());
   const filename = `${randomUUID()}.${extFor(f.type)}`;
   await mkdir(UPLOAD_DIR, { recursive: true });
@@ -66,5 +91,19 @@ export async function POST(req: Request) {
       status: "READY",
     },
   });
+
+  if (targetLessonId) {
+    await prisma.lesson.update({
+      where: { id: targetLessonId },
+      data: { mediaAssetId: asset.id, status: "READY" },
+    });
+  }
+  if (targetItemId) {
+    await prisma.contentItem.update({
+      where: { id: targetItemId },
+      data: { mediaAssetId: asset.id, status: "READY" },
+    });
+  }
+
   return ok(asset, 201);
 }
