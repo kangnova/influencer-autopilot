@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { NicheForm } from "@/components/niche-form";
+import { Nav } from "@/components/nav";
 import { DeleteButton } from "@/components/delete-button";
 import { LogoutButton } from "@/components/logout-button";
 
@@ -23,6 +24,8 @@ export default async function NichesPage() {
         </div>
         <LogoutButton />
       </header>
+
+      <Nav />
 
       <NicheForm />
 

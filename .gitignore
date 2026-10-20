@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# uploaded media (runtime files)
+/public/uploads/
+
 # production
 /build
 

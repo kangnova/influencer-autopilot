@@ -3,19 +3,27 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function DeleteButton({ id, name }: { id: string; name: string }) {
+export function DeleteButton({
+  id,
+  name,
+  endpoint = "/api/niches",
+}: {
+  id: string;
+  name: string;
+  endpoint?: string;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function handleDelete() {
     if (!window.confirm(`Delete "${name}"?`)) return;
     setLoading(true);
-    const res = await fetch(`/api/niches/${id}`, { method: "DELETE" });
+    const res = await fetch(`${endpoint}/${id}`, { method: "DELETE" });
     if (res.ok) {
       router.refresh();
     } else {
       setLoading(false);
-      window.alert("Failed to delete niche");
+      window.alert("Failed to delete");
     }
   }
 
