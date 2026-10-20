@@ -98,6 +98,11 @@ export class InstagramProvider implements SocialProvider {
       throw new Error("Instagram did not return a media container id.");
     }
 
+    // Wait for the container to finish processing. Publishing too early fails
+    // with error 9007 "media not ready" — Instagram processes the file
+    // asynchronously after accepting it, especially for video.
+    await this.waitForContainer(container.id, accessToken);
+
     const published = await this.graph<{ id?: string }>(
       `/${igId}/media_publish`,
       accessToken,
@@ -106,6 +111,27 @@ export class InstagramProvider implements SocialProvider {
     if (!published.id) throw new Error("Instagram did not return a media id.");
 
     return { externalPostId: published.id };
+  }
+
+  /** Poll the container until Instagram reports FINISHED (or a terminal error). */
+  private async waitForContainer(containerId: string, accessToken: string): Promise<void> {
+    const deadline = Date.now() + 120_000; // 2 minutes
+    let last = "IN_PROGRESS";
+    while (Date.now() < deadline) {
+      const status = await this.graph<{ status_code?: string; status?: string }>(
+        `/${containerId}?fields=status_code,status`,
+        accessToken
+      );
+      last = status.status_code ?? "UNKNOWN";
+      if (last === "FINISHED") return;
+      if (last === "ERROR" || last === "EXPIRED" || last === "PUBLISHED") {
+        throw new Error(
+          `Instagram media container ${last}${status.status ? `: ${status.status}` : ""}`
+        );
+      }
+      await new Promise((r) => setTimeout(r, 5000));
+    }
+    throw new Error(`Timed out waiting for Instagram media container (last status: ${last})`);
   }
 
   async insights(accessToken: string, externalPostId: string): Promise<SocialInsights> {
