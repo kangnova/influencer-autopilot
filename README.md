@@ -17,13 +17,17 @@ Orchestrates a 5-phase pipeline (full detail in `docs/PRD.md`):
 
 ## Stack
 
+Present:
 - Next.js (App Router) + TypeScript (strict)
-- Tailwind CSS + shadcn/ui
+- Tailwind CSS
 - Prisma + PostgreSQL
 - NextAuth.js (single-user credentials)
-- Zod + TanStack Query
+- Zod
+
+Planned (M2+):
 - OpenRouter (LLM orchestration, ordered model fallback)
 - Postgres-backed job queue + worker process for background pipeline runs
+- TanStack Query, shadcn/ui
 
 ## Architecture (high level)
 
@@ -42,7 +46,20 @@ See `docs/SPEC.md` for the data model, API contract, and connector interfaces.
 M1 Foundation → M2 LLM pipeline → M3 Video generation → M4 Distribution →
 M5 Monetization loop (see `docs/PRD.md` § Milestones).
 
+## Status
+
+- M1 Foundation — done: scaffold, auth, Prisma schema, niche + persona CRUD,
+  media library (manual upload).
+- M2 LLM pipeline — in progress: OpenRouter orchestration, job queue + worker,
+  job history UI.
+
 ## Getting started
 
-Not yet scaffolded — this repo currently holds only the planning documents.
-After scaffolding: `docker compose up` + `npm run dev`.
+Prerequisites: Node 20+, Docker (Postgres).
+
+1. Copy `.env.example` to `.env`, fill `DATABASE_URL` and `NEXTAUTH_SECRET`.
+2. `docker compose up -d` — Postgres on :5437.
+3. `npx prisma migrate deploy && npx prisma db seed` — tables + admin user.
+4. `npm run dev` — app on http://localhost:3007.
+
+Default login: `admin@autopilot.local` / `changeme123`.
