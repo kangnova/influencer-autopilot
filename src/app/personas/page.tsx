@@ -58,6 +58,16 @@ export default async function PersonasPage() {
                       {persona.identity}
                     </p>
                   )}
+                  {persona.masterPrompt && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs text-neutral-500">
+                        Master prompt
+                      </summary>
+                      <pre className="mt-1 overflow-x-auto rounded bg-neutral-50 p-2 text-xs text-neutral-700">
+                        {persona.masterPrompt}
+                      </pre>
+                    </details>
+                  )}
                   <p className="mt-2 text-xs text-neutral-400">
                     Status: {persona.status}
                   </p>

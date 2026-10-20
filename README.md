@@ -23,10 +23,10 @@ Present:
 - Prisma + PostgreSQL
 - NextAuth.js (single-user credentials)
 - Zod
-
-Planned (M2+):
 - OpenRouter (LLM orchestration, ordered model fallback)
-- Postgres-backed job queue + worker process for background pipeline runs
+- Postgres-backed job queue + worker process
+
+Planned (M3+):
 - TanStack Query, shadcn/ui
 
 ## Architecture (high level)
@@ -50,8 +50,9 @@ M5 Monetization loop (see `docs/PRD.md` § Milestones).
 
 - M1 Foundation — done: scaffold, auth, Prisma schema, niche + persona CRUD,
   media library (manual upload).
-- M2 LLM pipeline — in progress: OpenRouter orchestration, job queue + worker,
-  job history UI.
+- M2 LLM pipeline — done: OpenRouter orchestration (ordered fallback), job queue
+  + worker, job history UI.
+- M3 Video generation — next.
 
 ## Getting started
 
@@ -61,5 +62,6 @@ Prerequisites: Node 20+, Docker (Postgres).
 2. `docker compose up -d` — Postgres on :5437.
 3. `npx prisma migrate deploy && npx prisma db seed` — tables + admin user.
 4. `npm run dev` — app on http://localhost:3007.
+5. `npm run worker` — background job worker (polls the Job queue).
 
 Default login: `admin@autopilot.local` / `changeme123`.

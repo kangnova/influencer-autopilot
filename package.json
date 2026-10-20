@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "worker": "tsx scripts/worker.ts",
     "lint": "eslint"
   },
   "dependencies": {
@@ -26,6 +27,7 @@
     "eslint-config-next": "16.4.2",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   },
   "prisma": {

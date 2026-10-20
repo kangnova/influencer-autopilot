@@ -7,6 +7,7 @@ const links = [
   { href: "/niches", label: "Niches" },
   { href: "/personas", label: "Personas" },
   { href: "/media", label: "Media" },
+  { href: "/jobs", label: "Jobs" },
 ];
 
 export function Nav() {

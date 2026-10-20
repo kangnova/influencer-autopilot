@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { NicheForm } from "@/components/niche-form";
 import { Nav } from "@/components/nav";
 import { DeleteButton } from "@/components/delete-button";
+import { RunJobButton } from "@/components/run-job-button";
 import { LogoutButton } from "@/components/logout-button";
 
 export const dynamic = "force-dynamic";
@@ -48,8 +49,30 @@ export default async function NichesPage() {
                     <p className="mt-1 text-sm text-neutral-600">{niche.description}</p>
                   )}
                   <p className="mt-2 text-xs text-neutral-400">Status: {niche.status}</p>
+                  {niche.researchNotes && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs text-neutral-500">
+                        Research notes
+                      </summary>
+                      <pre className="mt-1 overflow-x-auto rounded bg-neutral-50 p-2 text-xs text-neutral-700">
+                        {niche.researchNotes}
+                      </pre>
+                    </details>
+                  )}
                 </div>
-                <DeleteButton id={niche.id} name={niche.name} />
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <RunJobButton
+                    type="NICHE_RESEARCH"
+                    payload={{ nicheId: niche.id }}
+                    label="Run research"
+                  />
+                  <RunJobButton
+                    type="PERSONA_GENERATE"
+                    payload={{ nicheId: niche.id }}
+                    label="Generate persona"
+                  />
+                  <DeleteButton id={niche.id} name={niche.name} />
+                </div>
               </li>
             ))}
           </ul>
