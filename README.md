@@ -25,9 +25,7 @@ Present:
 - Zod
 - OpenRouter (LLM orchestration, ordered model fallback)
 - Postgres-backed job queue + worker process
-
-Planned (M3+):
-- TanStack Query, shadcn/ui
+- Pluggable connectors: video generation + Instagram (Graph API)
 
 ## Architecture (high level)
 
@@ -52,7 +50,22 @@ M5 Monetization loop (see `docs/PRD.md` § Milestones).
   media library (manual upload).
 - M2 LLM pipeline — done: OpenRouter orchestration (ordered fallback), job queue
   + worker, job history UI.
-- M3 Video generation — next.
+- M3 Video generation — done: Higgsfield-ready prompts on lessons/content items,
+  manual media import linked to lessons/items, pluggable video-provider interface.
+- M4 Distribution — done: Instagram connector (Graph API), social accounts,
+  approve-gated post queue, manual-publish fallback (no ban risk by default).
+- M5 Monetization loop — done: metrics (manual entry + insights pull), funnel
+  dashboard (views → clicks → sales), niche sales link (Lynk.id).
+
+## Before going live
+
+- Set `SOCIAL_PROVIDER=instagram` and connect a real Instagram Business/Creator
+  account (linked to a Facebook Page) for auto-publish + insights; default
+  `manual` keeps you safe while you set that up.
+- Deploy publicly and set `PUBLIC_BASE_URL` to your domain so Instagram can fetch
+  uploaded media.
+- Sales happen on Lynk.id via the niche sales link; record clicks/sales in
+  Metrics as they come in.
 
 ## Getting started
 
