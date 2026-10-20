@@ -9,6 +9,8 @@ const links = [
   { href: "/courses", label: "Courses" },
   { href: "/content-plans", label: "Content plans" },
   { href: "/media", label: "Media" },
+  { href: "/social-accounts", label: "Accounts" },
+  { href: "/posts", label: "Posts" },
   { href: "/jobs", label: "Jobs" },
 ];
 
