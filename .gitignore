@@ -37,6 +37,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# Meta API secrets (App Secret + access token) — never commit
+docs/ID-Aplikasi*.txt
+
 # vercel
 .vercel
 

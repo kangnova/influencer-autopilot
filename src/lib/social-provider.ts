@@ -153,21 +153,31 @@ export class InstagramProvider implements SocialProvider {
   }
 
   private async resolveIgUserId(accessToken: string): Promise<string> {
-    const accounts = await this.graph<{ data?: { id: string }[] }>(
-      "/me/accounts?fields=id&limit=100",
+    const accounts = await this.graph<{ data?: { id: string; name?: string }[] }>(
+      "/me/accounts?fields=id,name&limit=100",
       accessToken
     );
-    const pageId = accounts.data?.[0]?.id;
+    // Target a specific Page by name when INSTAGRAM_PAGE_NAME is set (a token
+    // may admin several Pages; the first one is not always the right one).
+    // Falls back to the first Page when the env is unset or no name matches.
+    const targetName = process.env.INSTAGRAM_PAGE_NAME?.trim().toLowerCase();
+    const page =
+      (targetName &&
+        accounts.data?.find((p) => p.name?.trim().toLowerCase() === targetName)) ||
+      accounts.data?.[0];
+    const pageId = page?.id;
     if (!pageId) {
       throw new Error(
-        "No Facebook Page found. Link your Instagram Business account to a Facebook Page first."
+        targetName
+          ? `No Facebook Page named "${process.env.INSTAGRAM_PAGE_NAME}" found. Link your Instagram Business account to a Facebook Page first.`
+          : "No Facebook Page found. Link your Instagram Business account to a Facebook Page first."
       );
     }
-    const page = await this.graph<{ instagram_business_account?: { id: string } }>(
+    const selected = await this.graph<{ instagram_business_account?: { id: string } }>(
       `/${pageId}?fields=instagram_business_account`,
       accessToken
     );
-    const igId = page.instagram_business_account?.id;
+    const igId = selected.instagram_business_account?.id;
     if (!igId) throw new Error("This Page has no linked Instagram Business account.");
     return igId;
   }

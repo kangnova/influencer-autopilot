@@ -167,6 +167,15 @@ sudah menjelaskan penyebabnya (lihat Bagian G).
   → Token-nya bukan milik user yang admin Page, atau permission pages_show_list
   belum diizinkan. Ulangi Bagian E langkah 4-5, pastikan akun FB = admin Page.
 
+- Page influencer-mu TIDAK muncul di daftar padahal kamu yakin sudah bikin
+  → Kamu mungkin punya DUA akun Facebook dengan nama yang sama (mis. dua-duanya
+  "Nova Suharyanto"). Token cuma melihat Page milik akun yang login saat
+  generate token. Cara cek: panggil GET /me pakai token → catat ID-nya; lalu
+  buka Page influencer → Settings → Page access → lihat ID profil pemiliknya.
+  Kalau ID-nya beda, token dibuat dari akun yang SALAH. Solusi: (a) buat ulang
+  token dari akun pemilik Page, atau (b) tambahkan akun pemilik token sebagai
+  admin Page itu (Page access → Add new → cari pakai ID).
+
 - Error menyebut "Page Publishing Authorization" (PPA)
   → Sebagian Page (terutama yang terhubung iklan) wajib PPA dulu sebelum boleh
   di-publish lewat API. Selesaikan di business.facebook.com → Page → Settings →
