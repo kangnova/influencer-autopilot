@@ -4,6 +4,7 @@ export const nicheCreateSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(200),
   description: z.string().trim().max(2000).optional(),
   monetizationScore: z.number().int().min(0).max(100).optional(),
+  monetizationType: z.enum(["OWN_PRODUCT", "AFFILIATE"]).optional(),
   salesLinkUrl: z.string().trim().url().optional().or(z.literal("")),
 });
 
@@ -29,6 +30,8 @@ export const postCreateSchema = z.object({
   contentItemId: z.string().trim().min(1).optional().or(z.literal("")),
   socialAccountId: z.string().trim().min(1, "Social account is required"),
   caption: z.string().trim().max(5000).optional(),
+  format: z.enum(["VIDEO", "CAROUSEL"]).default("VIDEO"),
+  carouselImages: z.array(z.string().trim().min(1)).max(10).optional(),
   scheduledAt: z.string().trim().optional().or(z.literal("")),
 });
 
@@ -46,3 +49,22 @@ export const metricCreateSchema = z.object({
 });
 
 export const metricUpdateSchema = metricCreateSchema.partial();
+
+export const updateProfileSchema = z
+  .object({
+    email: z.string().trim().email("Invalid email").max(200).optional(),
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z
+      .string()
+      .min(8, "New password must be at least 8 characters")
+      .max(200)
+      .optional(),
+  })
+  .refine((d) => d.email || d.newPassword, {
+    message: "Nothing to update",
+  });
+
+export const userCreateSchema = z.object({
+  email: z.string().trim().email("Invalid email").max(200),
+  password: z.string().min(8, "Password must be at least 8 characters").max(200),
+});

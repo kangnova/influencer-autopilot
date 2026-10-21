@@ -13,6 +13,7 @@ const links = [
   { href: "/posts", label: "Posts" },
   { href: "/metrics", label: "Metrics" },
   { href: "/jobs", label: "Jobs" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function Nav() {
