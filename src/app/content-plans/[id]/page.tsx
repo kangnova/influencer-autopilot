@@ -24,7 +24,10 @@ export default async function ContentPlanDetailPage({
       niche: true,
       items: {
         orderBy: { dayIndex: "asc" },
-        include: { mediaAsset: true },
+        include: {
+          mediaAsset: true,
+          posts: { select: { status: true } },
+        },
       },
     },
   });
@@ -47,17 +50,33 @@ export default async function ContentPlanDetailPage({
 
       <section className="space-y-3">
         <h2 className="font-medium">Items ({plan.items.length})</h2>
-        {plan.items.map((item) => (
+        {plan.items.map((item) => {
+          const published =
+            item.status === "PUBLISHED" ||
+            item.posts.some((p) => p.status === "PUBLISHED");
+          return (
           <div
             key={item.id}
-            className="rounded-lg border border-neutral-200 bg-white p-4"
+            className={`rounded-lg border p-4 ${
+              published
+                ? "border-emerald-300 bg-emerald-50"
+                : "border-neutral-200 bg-white"
+            }`}
           >
             <div className="flex items-center justify-between gap-3">
               <p className="font-medium">
                 Day {item.dayIndex + 1}
                 {item.hook ? ` — ${item.hook}` : ""}
               </p>
-              <span className="text-xs text-neutral-400">{item.status}</span>
+              <span
+                className={`rounded px-2 py-0.5 text-xs font-medium ${
+                  published
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "text-neutral-400"
+                }`}
+              >
+                {published ? "✓ Published" : item.status}
+              </span>
             </div>
 
             {item.script && (
@@ -79,6 +98,42 @@ export default async function ContentPlanDetailPage({
                 <pre className="mt-1 whitespace-pre-wrap rounded bg-neutral-50 p-2 text-xs text-neutral-700">
                   {item.videoPrompt}
                 </pre>
+              </details>
+            )}
+
+            {Array.isArray(item.slides) && item.slides.length > 0 && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-xs text-neutral-500">
+                  Carousel ({item.slides.length} slides)
+                </summary>
+                <div className="mt-2 space-y-1">
+                  {item.slides.map((raw, i) => {
+                    const s = raw as { heading?: string; body?: string };
+                    return (
+                      <div key={i} className="flex gap-2 rounded bg-neutral-50 p-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`/uploads/slides/${plan.id}/day${item.dayIndex + 1}-${i + 1}.png`}
+                          alt={`Slide ${i + 1}`}
+                          className="h-24 w-20 shrink-0 rounded object-cover"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium">
+                            {i + 1}. {s.heading}
+                          </p>
+                          {s.body && (
+                            <p className="mt-0.5 text-xs text-neutral-600">{s.body}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {item.cta && (
+                    <div className="rounded bg-emerald-50 p-2 text-xs font-medium text-emerald-700">
+                      CTA: {item.cta}
+                    </div>
+                  )}
+                </div>
               </details>
             )}
 
@@ -115,7 +170,8 @@ export default async function ContentPlanDetailPage({
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </section>
     </main>
   );

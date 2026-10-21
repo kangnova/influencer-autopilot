@@ -14,7 +14,13 @@ export default async function ContentPlansPage() {
 
   const plans = await prisma.contentPlan.findMany({
     orderBy: { createdAt: "desc" },
-    include: { niche: true, items: { orderBy: { dayIndex: "asc" } } },
+    include: {
+      niche: true,
+      items: {
+        orderBy: { dayIndex: "asc" },
+        include: { posts: { select: { status: true } } },
+      },
+    },
   });
 
   return (
@@ -37,19 +43,35 @@ export default async function ContentPlansPage() {
           </p>
         ) : (
           <ul className="space-y-2">
-            {plans.map((p) => (
-              <li
-                key={p.id}
-                className="rounded-lg border border-neutral-200 bg-white p-4"
-              >
-                <Link href={`/content-plans/${p.id}`} className="font-medium hover:underline">
-                  {p.title}
-                </Link>
-                <p className="mt-1 text-xs text-neutral-400">
-                  {p.niche?.name ?? "—"} · {p.items.length} items · {p.status}
-                </p>
-              </li>
-            ))}
+            {plans.map((p) => {
+              const publishedCount = p.items.filter(
+                (i) =>
+                  i.status === "PUBLISHED" ||
+                  i.posts.some((post) => post.status === "PUBLISHED"),
+              ).length;
+              return (
+                <li
+                  key={p.id}
+                  className={`rounded-lg border p-4 ${
+                    publishedCount > 0
+                      ? "border-emerald-300 bg-emerald-50"
+                      : "border-neutral-200 bg-white"
+                  }`}
+                >
+                  <Link href={`/content-plans/${p.id}`} className="font-medium hover:underline">
+                    {p.title}
+                  </Link>
+                  <p className="mt-1 text-xs text-neutral-400">
+                    {p.niche?.name ?? "—"} · {p.items.length} items · {p.status}
+                    {publishedCount > 0 ? (
+                      <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 font-medium text-emerald-700">
+                        ✓ {publishedCount} published
+                      </span>
+                    ) : null}
+                  </p>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
