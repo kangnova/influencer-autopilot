@@ -40,6 +40,9 @@ yarn-error.log*
 # Meta API secrets (App Secret + access token) — never commit
 docs/ID-Aplikasi*.txt
 
+# Screenshots may contain credentials (fb.png / kn.png) — never commit
+docs/*.png
+
 # vercel
 .vercel
 
