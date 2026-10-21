@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { Nav } from "@/components/nav";
 import { SocialAccountForm } from "@/components/social-account-form";
+import { UpdateTokenForm } from "@/components/update-token-form";
 import { DeleteButton } from "@/components/delete-button";
 import { LogoutButton } from "@/components/logout-button";
 import { getSocialProvider } from "@/lib/social-provider";
@@ -51,19 +52,24 @@ export default async function SocialAccountsPage() {
             {accounts.map((account) => (
               <li
                 key={account.id}
-                className="flex items-center justify-between gap-4 rounded-lg border border-neutral-200 bg-white p-4"
+                className="rounded-lg border border-neutral-200 bg-white p-4"
               >
-                <div className="min-w-0">
-                  <p className="font-medium">@{account.handle}</p>
-                  <p className="mt-1 text-xs text-neutral-400">
-                    {account.platform} · {account.accountType} · {account.status}
-                  </p>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="font-medium">@{account.handle}</p>
+                    <p className="mt-1 text-xs text-neutral-400">
+                      {account.platform} · {account.accountType} · {account.status}
+                    </p>
+                  </div>
+                  <DeleteButton
+                    id={account.id}
+                    name={`@${account.handle}`}
+                    endpoint="/api/social-accounts"
+                  />
                 </div>
-                <DeleteButton
-                  id={account.id}
-                  name={`@${account.handle}`}
-                  endpoint="/api/social-accounts"
-                />
+                {provider.name !== "manual" && (
+                  <UpdateTokenForm accountId={account.id} handle={account.handle} />
+                )}
               </li>
             ))}
           </ul>
