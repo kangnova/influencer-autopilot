@@ -119,6 +119,7 @@ export default async function PostsPage() {
                     {post.scheduledAt ? ` · scheduled ${fmt(post.scheduledAt)}` : ""}
                     {post.publishedAt ? ` · published ${fmt(post.publishedAt)}` : ""}
                     {post.externalPostId ? ` · IG ${post.externalPostId}` : ""}
+                    {post.facebookPostId ? ` · FB ${post.facebookPostId}` : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">

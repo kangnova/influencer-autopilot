@@ -36,6 +36,17 @@ export interface SocialProvider {
       carouselImages?: string[];
     }
   ): Promise<{ externalPostId: string }>;
+  /** Cross-post the same content to the Facebook Page (only real providers). */
+  publishFacebook?(
+    accessToken: string,
+    post: {
+      caption: string;
+      mediaUrl: string;
+      mediaKind: "IMAGE" | "VIDEO";
+      format?: "VIDEO" | "CAROUSEL";
+      carouselImages?: string[];
+    }
+  ): Promise<{ externalPostId: string }>;
   insights(accessToken: string, externalPostId: string): Promise<SocialInsights>;
 }
 
@@ -216,34 +227,129 @@ export class InstagramProvider implements SocialProvider {
     };
   }
 
-  private async resolveIgUserId(accessToken: string): Promise<string> {
+  /**
+   * Cross-post the same content to the Facebook Page feed, using the same Page
+   * the Instagram account is linked to. Requires `pages_manage_posts` (and
+   * `publish_video` for video) on the token. Carousels become a multi-photo post.
+   */
+  async publishFacebook(
+    accessToken: string,
+    post: {
+      caption: string;
+      mediaUrl: string;
+      mediaKind: "IMAGE" | "VIDEO";
+      format?: "VIDEO" | "CAROUSEL";
+      carouselImages?: string[];
+    }
+  ): Promise<{ externalPostId: string }> {
+    const pageId = await this.resolvePageId(accessToken);
+    const caption = post.caption ?? "";
+    const images = (post.carouselImages ?? []).filter(Boolean);
+
+    // Carousel → multi-photo post: upload each image unpublished, then one
+    // /feed post attaches them all via attached_media[N].
+    if (post.format === "CAROUSEL" && images.length >= 2) {
+      const mediaFbIds: string[] = [];
+      for (const url of images) {
+        const uploaded = await this.graph<{ id?: string }>(
+          `/${pageId}/photos`,
+          accessToken,
+          {
+            method: "POST",
+            body: new URLSearchParams({ url, published: "false" }),
+          }
+        );
+        if (!uploaded.id) throw new Error("Facebook did not return a photo id.");
+        mediaFbIds.push(uploaded.id);
+      }
+      const body = new URLSearchParams({ message: caption });
+      mediaFbIds.forEach((id, i) =>
+        body.set(`attached_media[${i}]`, JSON.stringify({ media_fbid: id }))
+      );
+      const feed = await this.graph<{ id?: string }>(
+        `/${pageId}/feed`,
+        accessToken,
+        { method: "POST", body }
+      );
+      if (!feed.id) throw new Error("Facebook did not return a post id.");
+      return { externalPostId: feed.id };
+    }
+
+    // Video → /videos (file_url must be publicly reachable).
+    if (post.mediaKind === "VIDEO") {
+      const video = await this.graph<{ id?: string }>(
+        `/${pageId}/videos`,
+        accessToken,
+        {
+          method: "POST",
+          body: new URLSearchParams({
+            file_url: post.mediaUrl,
+            description: caption,
+          }),
+        }
+      );
+      if (!video.id) throw new Error("Facebook did not return a video id.");
+      return { externalPostId: video.id };
+    }
+
+    // Single image → /photos (prefer post_id, which is the feed post id).
+    if (post.mediaUrl) {
+      const photo = await this.graph<{ id?: string; post_id?: string }>(
+        `/${pageId}/photos`,
+        accessToken,
+        {
+          method: "POST",
+          body: new URLSearchParams({ url: post.mediaUrl, message: caption }),
+        }
+      );
+      const photoId = photo.post_id ?? photo.id;
+      if (!photoId) throw new Error("Facebook did not return a photo id.");
+      return { externalPostId: photoId };
+    }
+
+    // Text-only fallback → /feed.
+    const feed = await this.graph<{ id?: string }>(
+      `/${pageId}/feed`,
+      accessToken,
+      { method: "POST", body: new URLSearchParams({ message: caption }) }
+    );
+    if (!feed.id) throw new Error("Facebook did not return a post id.");
+    return { externalPostId: feed.id };
+  }
+
+  /** Resolve the Facebook Page id targeted by INSTAGRAM_PAGE_NAME / INSTAGRAM_PAGE_ID. */
+  private async resolvePageId(accessToken: string): Promise<string> {
     // Prefer an explicit Page ID (deterministic — a freshly-created Page under
     // the "new Pages experience" sometimes does not appear in /me/accounts for
     // a while, but is directly queryable). Falls back to /me/accounts lookup.
     const pageIdEnv = process.env.INSTAGRAM_PAGE_ID?.trim();
-    let pageId = pageIdEnv || undefined;
+    if (pageIdEnv) return pageIdEnv;
+
+    const accounts = await this.graph<{ data?: { id: string; name?: string }[] }>(
+      "/me/accounts?fields=id,name&limit=100",
+      accessToken
+    );
+    // Target a specific Page by name when INSTAGRAM_PAGE_NAME is set (a token
+    // may admin several Pages; the first one is not always the right one).
+    // Falls back to the first Page when the env is unset or no name matches.
+    const targetName = process.env.INSTAGRAM_PAGE_NAME?.trim().toLowerCase();
+    const page =
+      (targetName &&
+        accounts.data?.find((p) => p.name?.trim().toLowerCase() === targetName)) ||
+      accounts.data?.[0];
+    const pageId = page?.id;
     if (!pageId) {
-      const accounts = await this.graph<{ data?: { id: string; name?: string }[] }>(
-        "/me/accounts?fields=id,name&limit=100",
-        accessToken
+      throw new Error(
+        targetName
+          ? `No Facebook Page named "${process.env.INSTAGRAM_PAGE_NAME}" found. Link your Instagram Business account to a Facebook Page first.`
+          : "No Facebook Page found. Link your Instagram Business account to a Facebook Page first."
       );
-      // Target a specific Page by name when INSTAGRAM_PAGE_NAME is set (a token
-      // may admin several Pages; the first one is not always the right one).
-      // Falls back to the first Page when the env is unset or no name matches.
-      const targetName = process.env.INSTAGRAM_PAGE_NAME?.trim().toLowerCase();
-      const page =
-        (targetName &&
-          accounts.data?.find((p) => p.name?.trim().toLowerCase() === targetName)) ||
-        accounts.data?.[0];
-      pageId = page?.id;
-      if (!pageId) {
-        throw new Error(
-          targetName
-            ? `No Facebook Page named "${process.env.INSTAGRAM_PAGE_NAME}" found. Link your Instagram Business account to a Facebook Page first.`
-            : "No Facebook Page found. Link your Instagram Business account to a Facebook Page first."
-        );
-      }
     }
+    return pageId;
+  }
+
+  private async resolveIgUserId(accessToken: string): Promise<string> {
+    const pageId = await this.resolvePageId(accessToken);
     const selected = await this.graph<{ instagram_business_account?: { id: string } }>(
       `/${pageId}?fields=instagram_business_account`,
       accessToken

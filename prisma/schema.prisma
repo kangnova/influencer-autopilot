@@ -197,6 +197,7 @@ model Post {
   scheduledAt     DateTime?
   publishedAt     DateTime?
   externalPostId  String?
+  facebookPostId  String?
   createdAt       DateTime      @default(now())
   metrics         Metric[]
 }

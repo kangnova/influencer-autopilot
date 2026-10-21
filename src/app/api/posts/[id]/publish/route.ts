@@ -63,19 +63,40 @@ export async function POST(req: Request, { params }: Params) {
   const provider = getSocialProvider();
   try {
     const token = decrypt(post.socialAccount.accessToken);
-    const { externalPostId } = await provider.publish(token, {
+    const publishPayload = {
       caption: post.caption ?? post.contentItem?.hook ?? "",
       mediaUrl: publicUrl(post.contentItem?.mediaAsset?.url ?? ""),
       mediaKind: post.contentItem?.mediaAsset?.kind ?? "IMAGE",
       format: post.format,
       carouselImages: isCarousel ? carouselImages.map(publicUrl) : undefined,
-    });
+    };
+
+    const { externalPostId } = await provider.publish(token, publishPayload);
+
+    // Cross-post to the Facebook Page with the same token. Best effort: a FB
+    // failure must not roll back an Instagram post that already went live.
+    let facebookPostId: string | null = null;
+    let facebookWarning: string | null = null;
+    if (provider.publishFacebook) {
+      try {
+        const fb = await provider.publishFacebook(token, publishPayload);
+        facebookPostId = fb.externalPostId;
+      } catch (e) {
+        facebookWarning =
+          e instanceof Error ? e.message : "Facebook cross-post failed";
+      }
+    }
 
     const updated = await prisma.post.update({
       where: { id },
-      data: { status: "PUBLISHED", publishedAt: new Date(), externalPostId },
+      data: {
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+        externalPostId,
+        facebookPostId,
+      },
     });
-    return ok(updated);
+    return ok({ ...updated, facebookWarning });
   } catch (e) {
     return fail(e instanceof Error ? e.message : "Publish failed", 502);
   }
