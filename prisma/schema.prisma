@@ -29,11 +29,17 @@ enum Platform {
   INSTAGRAM
 }
 
+enum MonetizationType {
+  OWN_PRODUCT
+  AFFILIATE
+}
+
 enum JobType {
   NICHE_RESEARCH
   PERSONA_GENERATE
   COURSE_SCRIPTS
   CONTENT_PLAN
+  EBOOK_GENERATE
   VIDEO_PROMPTS
   MEDIA_IMPORT
 }
@@ -46,25 +52,28 @@ enum JobStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  role      Role     @default(OPERATOR)
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  role         Role     @default(OPERATOR)
+  googleLinked Boolean  @default(false)
+  createdAt    DateTime @default(now())
 }
 
 model Niche {
-  id                String        @id @default(cuid())
+  id                String           @id @default(cuid())
   name              String
   description       String?
-  monetizationScore Int           @default(0)
-  status            Status        @default(DRAFT)
+  monetizationScore Int              @default(0)
+  monetizationType  MonetizationType @default(OWN_PRODUCT)
+  status            Status           @default(DRAFT)
   researchNotes     String?
   salesLinkUrl      String?
-  createdAt         DateTime      @default(now())
+  createdAt         DateTime         @default(now())
   personas          Persona[]
   courses           Course[]
   contentPlans      ContentPlan[]
+  ebooks            Ebook[]
 }
 
 model Persona {
@@ -104,6 +113,17 @@ model Lesson {
   mediaAsset   MediaAsset? @relation(fields: [mediaAssetId], references: [id])
 }
 
+model Ebook {
+  id        String   @id @default(cuid())
+  nicheId   String
+  niche     Niche    @relation(fields: [nicheId], references: [id], onDelete: Cascade)
+  title     String
+  subtitle  String?
+  chapters  Json
+  status    Status   @default(READY)
+  createdAt DateTime @default(now())
+}
+
 model ContentPlan {
   id        String        @id @default(cuid())
   nicheId   String
@@ -123,6 +143,9 @@ model ContentItem {
   hook         String?
   script       String?
   videoPrompt  String?
+  // Carousel variant: N text slides + a closing call-to-action.
+  slides       Json?
+  cta          String?
   status       Status       @default(DRAFT)
   scheduledAt  DateTime?
   mediaAssetId String?      @unique
@@ -154,6 +177,11 @@ model SocialAccount {
   posts       Post[]
 }
 
+enum PostFormat {
+  VIDEO
+  CAROUSEL
+}
+
 model Post {
   id              String        @id @default(cuid())
   contentItemId   String?
@@ -161,6 +189,9 @@ model Post {
   socialAccountId String
   socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id])
   caption         String?
+  format          PostFormat    @default(VIDEO)
+  // Public image URLs for a CAROUSEL post, in slide order (1..N).
+  carouselImages  Json?
   status          Status        @default(DRAFT)
   approved        Boolean       @default(false)
   scheduledAt     DateTime?
