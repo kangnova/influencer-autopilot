@@ -10,6 +10,7 @@ const TYPES = [
   "PERSONA_GENERATE",
   "COURSE_SCRIPTS",
   "CONTENT_PLAN",
+  "EBOOK_GENERATE",
 ] as const;
 
 const runSchema = z.object({

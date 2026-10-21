@@ -47,7 +47,16 @@ export async function POST(req: Request, { params }: Params) {
     return ok(updated);
   }
 
-  if (!post.contentItem?.mediaAsset) {
+  const isCarousel = post.format === "CAROUSEL";
+  const carouselImages = Array.isArray(post.carouselImages)
+    ? (post.carouselImages as string[])
+    : [];
+
+  if (isCarousel) {
+    if (carouselImages.length < 2) {
+      return fail("A carousel post needs at least 2 slide image URLs", 422);
+    }
+  } else if (!post.contentItem?.mediaAsset) {
     return fail("This post's content item has no media attached", 422);
   }
 
@@ -55,9 +64,11 @@ export async function POST(req: Request, { params }: Params) {
   try {
     const token = decrypt(post.socialAccount.accessToken);
     const { externalPostId } = await provider.publish(token, {
-      caption: post.caption ?? post.contentItem.hook ?? "",
-      mediaUrl: publicUrl(post.contentItem.mediaAsset.url),
-      mediaKind: post.contentItem.mediaAsset.kind,
+      caption: post.caption ?? post.contentItem?.hook ?? "",
+      mediaUrl: publicUrl(post.contentItem?.mediaAsset?.url ?? ""),
+      mediaKind: post.contentItem?.mediaAsset?.kind ?? "IMAGE",
+      format: post.format,
+      carouselImages: isCarousel ? carouselImages.map(publicUrl) : undefined,
     });
 
     const updated = await prisma.post.update({

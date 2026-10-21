@@ -14,7 +14,10 @@ export const dynamic = "force-dynamic";
 
 function fmt(d: Date | null): string {
   if (!d) return "—";
-  return new Date(d).toLocaleString("id-ID", { hour12: false });
+  return new Date(d).toLocaleString("id-ID", {
+    hour12: false,
+    timeZone: "Asia/Jakarta",
+  });
 }
 
 export default async function PostsPage() {
@@ -35,7 +38,6 @@ export default async function PostsPage() {
       },
     }),
     prisma.contentItem.findMany({
-      where: { mediaAssetId: { not: null } },
       orderBy: { dayIndex: "asc" },
       include: { plan: { include: { niche: true } } },
     }),
@@ -47,6 +49,13 @@ export default async function PostsPage() {
     label: `${i.plan.niche.name} · ${i.plan.title} · Day ${i.dayIndex + 1}${
       i.hook ? ` — ${i.hook}` : ""
     }`,
+    hook: i.hook,
+    planId: i.planId,
+    dayIndex: i.dayIndex,
+    slides: Array.isArray(i.slides)
+      ? (i.slides as { heading?: string; body?: string }[])
+      : undefined,
+    cta: i.cta,
   }));
   const formAccounts = accounts.map((a) => ({ id: a.id, handle: a.handle }));
 
@@ -89,11 +98,15 @@ export default async function PostsPage() {
                         }`
                       : ""}
                   </p>
-                  {post.contentItem?.mediaAsset && (
-                    <p className="mt-1 text-xs text-neutral-400">
-                      media: {post.contentItem.mediaAsset.kind.toLowerCase()}
-                    </p>
-                  )}
+                  <p className="mt-1 text-xs text-neutral-400">
+                    {post.format.toLowerCase()}
+                    {post.contentItem?.mediaAsset
+                      ? ` · ${post.contentItem.mediaAsset.kind.toLowerCase()}`
+                      : ""}
+                    {Array.isArray(post.carouselImages)
+                      ? ` · ${post.carouselImages.length} images`
+                      : ""}
+                  </p>
                   <p className="mt-2 text-xs text-neutral-400">
                     <span
                       className={`font-medium ${

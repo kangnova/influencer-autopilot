@@ -28,7 +28,13 @@ export interface SocialProvider {
   connect(accessToken: string): Promise<{ handle: string; accountType: string }>;
   publish(
     accessToken: string,
-    post: { caption: string; mediaUrl: string; mediaKind: "IMAGE" | "VIDEO" }
+    post: {
+      caption: string;
+      mediaUrl: string;
+      mediaKind: "IMAGE" | "VIDEO";
+      format?: "VIDEO" | "CAROUSEL";
+      carouselImages?: string[];
+    }
   ): Promise<{ externalPostId: string }>;
   insights(accessToken: string, externalPostId: string): Promise<SocialInsights>;
 }
@@ -61,25 +67,41 @@ export class InstagramProvider implements SocialProvider {
   readonly name = "instagram" as const;
 
   // Resolve the Instagram Business account from a Graph API token:
-  // me/accounts -> first Page -> instagram_business_account -> username.
+  // me/accounts -> Page named by INSTAGRAM_PAGE_NAME (or first) ->
+  // instagram_business_account -> username.
   async connect(accessToken: string): Promise<{ handle: string; accountType: string }> {
     const igId = await this.resolveIgUserId(accessToken);
-    const user = await this.graph<{ username?: string; account_type?: string }>(
-      `/${igId}?fields=username,account_type`,
+    // Note: the Instagram Graph API does not expose an `account_type` field on
+    // the IG business-account node (requesting it returns error #100), so the
+    // Business/Creator distinction cannot be auto-detected here. Default to
+    // BUSINESS — it only affects a display label, not publishing.
+    const user = await this.graph<{ username?: string }>(
+      `/${igId}?fields=username`,
       accessToken
     );
     if (!user.username) throw new Error("Instagram account did not return a username.");
     return {
       handle: user.username,
-      accountType: user.account_type?.toUpperCase() === "CREATOR" ? "CREATOR" : "BUSINESS",
+      accountType: "BUSINESS",
     };
   }
 
   async publish(
     accessToken: string,
-    post: { caption: string; mediaUrl: string; mediaKind: "IMAGE" | "VIDEO" }
+    post: {
+      caption: string;
+      mediaUrl: string;
+      mediaKind: "IMAGE" | "VIDEO";
+      format?: "VIDEO" | "CAROUSEL";
+      carouselImages?: string[];
+    }
   ): Promise<{ externalPostId: string }> {
     const igId = await this.resolveIgUserId(accessToken);
+    const images = (post.carouselImages ?? []).filter(Boolean);
+    if (post.format === "CAROUSEL" && images.length >= 2) {
+      return this.publishCarousel(igId, accessToken, post.caption ?? "", images);
+    }
+
     const isVideo = post.mediaKind === "VIDEO";
 
     const container = await this.graph<{ id?: string }>(
@@ -110,6 +132,48 @@ export class InstagramProvider implements SocialProvider {
     );
     if (!published.id) throw new Error("Instagram did not return a media id.");
 
+    return { externalPostId: published.id };
+  }
+
+  /** Build a carousel: one IMAGE container per slide, then a CAROUSEL parent. */
+  private async publishCarousel(
+    igId: string,
+    accessToken: string,
+    caption: string,
+    images: string[]
+  ): Promise<{ externalPostId: string }> {
+    const childIds: string[] = [];
+    for (const url of images) {
+      const child = await this.graph<{ id?: string }>(`/${igId}/media`, accessToken, {
+        method: "POST",
+        body: new URLSearchParams({
+          media_type: "IMAGE",
+          image_url: url,
+          is_carousel_item: "true",
+        }),
+      });
+      if (!child.id) throw new Error("Instagram did not return a child media container id.");
+      await this.waitForContainer(child.id, accessToken);
+      childIds.push(child.id);
+    }
+
+    const parent = await this.graph<{ id?: string }>(`/${igId}/media`, accessToken, {
+      method: "POST",
+      body: new URLSearchParams({
+        media_type: "CAROUSEL",
+        children: childIds.join(","),
+        caption,
+      }),
+    });
+    if (!parent.id) throw new Error("Instagram did not return a carousel container id.");
+    await this.waitForContainer(parent.id, accessToken);
+
+    const published = await this.graph<{ id?: string }>(
+      `/${igId}/media_publish`,
+      accessToken,
+      { method: "POST", body: new URLSearchParams({ creation_id: parent.id }) }
+    );
+    if (!published.id) throw new Error("Instagram did not return a media id.");
     return { externalPostId: published.id };
   }
 
@@ -153,25 +217,32 @@ export class InstagramProvider implements SocialProvider {
   }
 
   private async resolveIgUserId(accessToken: string): Promise<string> {
-    const accounts = await this.graph<{ data?: { id: string; name?: string }[] }>(
-      "/me/accounts?fields=id,name&limit=100",
-      accessToken
-    );
-    // Target a specific Page by name when INSTAGRAM_PAGE_NAME is set (a token
-    // may admin several Pages; the first one is not always the right one).
-    // Falls back to the first Page when the env is unset or no name matches.
-    const targetName = process.env.INSTAGRAM_PAGE_NAME?.trim().toLowerCase();
-    const page =
-      (targetName &&
-        accounts.data?.find((p) => p.name?.trim().toLowerCase() === targetName)) ||
-      accounts.data?.[0];
-    const pageId = page?.id;
+    // Prefer an explicit Page ID (deterministic — a freshly-created Page under
+    // the "new Pages experience" sometimes does not appear in /me/accounts for
+    // a while, but is directly queryable). Falls back to /me/accounts lookup.
+    const pageIdEnv = process.env.INSTAGRAM_PAGE_ID?.trim();
+    let pageId = pageIdEnv || undefined;
     if (!pageId) {
-      throw new Error(
-        targetName
-          ? `No Facebook Page named "${process.env.INSTAGRAM_PAGE_NAME}" found. Link your Instagram Business account to a Facebook Page first.`
-          : "No Facebook Page found. Link your Instagram Business account to a Facebook Page first."
+      const accounts = await this.graph<{ data?: { id: string; name?: string }[] }>(
+        "/me/accounts?fields=id,name&limit=100",
+        accessToken
       );
+      // Target a specific Page by name when INSTAGRAM_PAGE_NAME is set (a token
+      // may admin several Pages; the first one is not always the right one).
+      // Falls back to the first Page when the env is unset or no name matches.
+      const targetName = process.env.INSTAGRAM_PAGE_NAME?.trim().toLowerCase();
+      const page =
+        (targetName &&
+          accounts.data?.find((p) => p.name?.trim().toLowerCase() === targetName)) ||
+        accounts.data?.[0];
+      pageId = page?.id;
+      if (!pageId) {
+        throw new Error(
+          targetName
+            ? `No Facebook Page named "${process.env.INSTAGRAM_PAGE_NAME}" found. Link your Instagram Business account to a Facebook Page first.`
+            : "No Facebook Page found. Link your Instagram Business account to a Facebook Page first."
+        );
+      }
     }
     const selected = await this.graph<{ instagram_business_account?: { id: string } }>(
       `/${pageId}?fields=instagram_business_account`,

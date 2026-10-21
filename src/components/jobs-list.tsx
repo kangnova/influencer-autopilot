@@ -69,7 +69,11 @@ export function JobsList() {
             </span>
           </div>
           <p className="mt-1 text-xs text-neutral-400">
-            {new Date(job.createdAt).toLocaleString()} · attempts {job.attempts}
+            {new Date(job.createdAt).toLocaleString("id-ID", {
+              hour12: false,
+              timeZone: "Asia/Jakarta",
+            })}{" "}
+            · attempts {job.attempts}
           </p>
           {job.error && (
             <p className="mt-2 rounded bg-red-50 p-2 text-xs text-red-600">{job.error}</p>

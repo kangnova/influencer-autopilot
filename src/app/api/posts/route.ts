@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
@@ -39,7 +40,8 @@ export async function POST(req: Request) {
   const parsed = postCreateSchema.safeParse(body);
   if (!parsed.success) return fail("Invalid input", 422);
 
-  const { contentItemId, socialAccountId, caption, scheduledAt } = parsed.data;
+  const { contentItemId, socialAccountId, caption, format, carouselImages, scheduledAt } =
+    parsed.data;
 
   const account = await prisma.socialAccount.findUnique({
     where: { id: socialAccountId },
@@ -63,6 +65,10 @@ export async function POST(req: Request) {
       contentItemId: itemId,
       socialAccountId,
       caption: caption || null,
+      format: format ?? "VIDEO",
+      carouselImages: carouselImages?.length
+        ? (carouselImages as unknown as Prisma.InputJsonValue)
+        : undefined,
       scheduledAt: hasSchedule ? when : null,
       status: hasSchedule ? "SCHEDULED" : "DRAFT",
     },
