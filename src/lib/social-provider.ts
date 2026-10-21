@@ -243,6 +243,10 @@ export class InstagramProvider implements SocialProvider {
     }
   ): Promise<{ externalPostId: string }> {
     const pageId = await this.resolvePageId(accessToken);
+    // FB Page posts must be made AS the page, so resolve the page access token
+    // (a user token fails with "#200 Unpublished posts must be posted to a page
+    // as the page itself").
+    const pageToken = await this.resolvePageToken(accessToken, pageId);
     const caption = post.caption ?? "";
     const images = (post.carouselImages ?? []).filter(Boolean);
 
@@ -253,7 +257,7 @@ export class InstagramProvider implements SocialProvider {
       for (const url of images) {
         const uploaded = await this.graph<{ id?: string }>(
           `/${pageId}/photos`,
-          accessToken,
+          pageToken,
           {
             method: "POST",
             body: new URLSearchParams({ url, published: "false" }),
@@ -268,7 +272,7 @@ export class InstagramProvider implements SocialProvider {
       );
       const feed = await this.graph<{ id?: string }>(
         `/${pageId}/feed`,
-        accessToken,
+        pageToken,
         { method: "POST", body }
       );
       if (!feed.id) throw new Error("Facebook did not return a post id.");
@@ -279,7 +283,7 @@ export class InstagramProvider implements SocialProvider {
     if (post.mediaKind === "VIDEO") {
       const video = await this.graph<{ id?: string }>(
         `/${pageId}/videos`,
-        accessToken,
+        pageToken,
         {
           method: "POST",
           body: new URLSearchParams({
@@ -296,7 +300,7 @@ export class InstagramProvider implements SocialProvider {
     if (post.mediaUrl) {
       const photo = await this.graph<{ id?: string; post_id?: string }>(
         `/${pageId}/photos`,
-        accessToken,
+        pageToken,
         {
           method: "POST",
           body: new URLSearchParams({ url: post.mediaUrl, message: caption }),
@@ -310,11 +314,23 @@ export class InstagramProvider implements SocialProvider {
     // Text-only fallback → /feed.
     const feed = await this.graph<{ id?: string }>(
       `/${pageId}/feed`,
-      accessToken,
+      pageToken,
       { method: "POST", body: new URLSearchParams({ message: caption }) }
     );
     if (!feed.id) throw new Error("Facebook did not return a post id.");
     return { externalPostId: feed.id };
+  }
+
+  /** Resolve a Page access token (posts to a Page must be made AS the page). */
+  private async resolvePageToken(accessToken: string, pageId: string): Promise<string> {
+    const res = await this.graph<{ access_token?: string }>(
+      `/${pageId}?fields=access_token`,
+      accessToken
+    );
+    if (!res.access_token) {
+      throw new Error("Facebook did not return a page access token.");
+    }
+    return res.access_token;
   }
 
   /** Resolve the Facebook Page id targeted by INSTAGRAM_PAGE_NAME / INSTAGRAM_PAGE_ID. */
